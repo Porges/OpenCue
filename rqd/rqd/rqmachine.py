@@ -27,7 +27,7 @@ Contact: Middle-Tier
 SVN: $Id$
 """
 
-import commands
+import subprocess
 import errno
 import logging as log
 import math
@@ -46,17 +46,17 @@ if platform.system() in ('Linux', 'Darwin'):
     import resource
     import yaml
 
-import rqconstants
-from rqexceptions import CoreReservationFailureException
-import rqutil
-import rqswap
+from . import rqconstants
+from .rqexceptions import CoreReservationFailureException
+from . import rqutil
+from . import rqswap
 
 if platform.system() == "win32":
     import win32process
     import win32api
 
-from compiled_proto import host_pb2
-from compiled_proto import report_pb2
+from .compiled_proto import host_pb2
+from .compiled_proto import report_pb2
 
 KILOBYTE = 1024
 
@@ -212,7 +212,7 @@ class Machine:
             pidData = {"time": now}
             bootTime = self.getBootTime()
 
-            values = frames.values()
+            values = list(frames.values())
 
             for frame in values:
                 if frame.pid > 0:
@@ -222,7 +222,7 @@ class Machine:
                     pcpu = 0
                     if rqconstants.ENABLE_PTREE:
                         ptree = []
-                    for pid, data in pids.iteritems():
+                    for pid, data in pids.items():
                         if data["session"] == session:
                             try:
                                 rss += int(data["rss"])
@@ -238,7 +238,7 @@ class Machine:
                                 seconds = now - bootTime - \
                                         float(data["start_time"]) / rqconstants.SYS_HERTZ
                                 if seconds:
-                                    if self.__pidHistory.has_key(pid):
+                                    if pid in self.__pidHistory:
                                         # Percent cpu using decaying average, 50% from 10 seconds ago, 50% from last 10 seconds:
                                         oldTotalTime, oldSeconds, oldPidPcpu = self.__pidHistory[pid]
                                         #checking if already updated data
@@ -324,7 +324,7 @@ class Machine:
             try:
                 # /shots/spi/home/bin/spinux1/cudaInfo
                 # /shots/spi/home/bin/rhel7/cudaInfo
-                cudaInfo = commands.getoutput('/usr/local/spi/rqd3/cudaInfo')
+                cudaInfo = subprocess.getoutput('/usr/local/spi/rqd3/cudaInfo')
                 if 'There is no device supporting CUDA' in cudaInfo:
                     self.gpuNotSupported = True
                 else:
@@ -435,12 +435,12 @@ class Machine:
                                                / int(singleCore.get('cpu cores', '1')))
 
                     __totalCores += rqconstants.CORE_VALUE
-                    if singleCore.has_key("core id") \
-                       and singleCore.has_key("physical id") \
+                    if "core id" in singleCore \
+                       and "physical id" in singleCore \
                        and not singleCore["physical id"] in procsFound:
                         procsFound.append(singleCore["physical id"])
                         __numProcs += 1
-                    elif not singleCore.has_key("core id"):
+                    elif "core id" not in singleCore:
                         __numProcs += 1
                     singleCore = {}
                 # An entry without data
@@ -517,7 +517,7 @@ class Machine:
         return self.__windowsStat
 
     def updateMacMemory(self):
-        memsizeOutput = commands.getoutput('sysctl hw.memsize').strip()
+        memsizeOutput = subprocess.getoutput('sysctl hw.memsize').strip()
         memsizeRegex = re.compile(r'^hw.memsize: (?P<totalMemBytes>[\d]+)$')
         memsizeMatch = memsizeRegex.match(memsizeOutput)
         if memsizeMatch:
@@ -525,7 +525,7 @@ class Machine:
         else:
             self.__renderHost.total_mem = 0
 
-        vmStatLines = commands.getoutput('vm_stat').split('\n')
+        vmStatLines = subprocess.getoutput('vm_stat').split('\n')
         lineRegex = re.compile(r'^(?P<field>.+):[\s]+(?P<pages>[\d]+).$')
         vmStats = {}
         for line in vmStatLines[1:-2]:
@@ -537,7 +537,7 @@ class Machine:
         inactiveMemory = vmStats.get("Pages inactive", 0) / 1024
         self.__renderHost.free_mem = freeMemory + inactiveMemory
 
-        swapStats = commands.getoutput('sysctl vm.swapusage').strip()
+        swapStats = subprocess.getoutput('sysctl vm.swapusage').strip()
         swapRegex = re.compile(r'^.* free = (?P<freeMb>[\d]+)M .*$')
         swapMatch = swapRegex.match(swapStats)
         if swapMatch:

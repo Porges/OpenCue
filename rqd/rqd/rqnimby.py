@@ -25,8 +25,8 @@ import signal
 import threading
 import logging as log
 
-import rqconstants
-import rqutil
+from . import rqconstants
+from . import rqutil
 
 
 class Nimby(threading.Thread):
@@ -84,7 +84,7 @@ class Nimby(threading.Thread):
                     log.debug("Found device: %s" % device)
                     try:
                         self.fileObjList.append(open("/dev/input/%s" % device, "rb"))
-                    except IOError, e:
+                    except IOError as e:
                         # Bad device found
                         log.debug("IOError: Failed to open %s, %s" % ("/dev/input/%s" % device, e))
         finally:

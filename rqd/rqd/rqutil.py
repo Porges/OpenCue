@@ -37,7 +37,7 @@ import socket
 import subprocess
 import threading
 
-import rqconstants
+from . import rqconstants
 
 PERMISSIONS = threading.Lock()
 HIGH_PERMISSION_GROUPS = os.getgroups()
